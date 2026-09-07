@@ -1,6 +1,6 @@
 pipeline {
     // Si tu agente tiene una etiqueta específica como 'docker', cambiala aquí
-    agent docker 
+    agent docker-agent 
 
     environment {
         // Obtenemos los primeros 7 caracteres del commit
