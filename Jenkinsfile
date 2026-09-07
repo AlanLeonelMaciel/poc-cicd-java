@@ -22,7 +22,16 @@ pipeline {
         stage('Push al Registry') {
             steps {
                 echo "Subiendo imagen al registry local..."
-                sh "docker push ${IMAGE_NAME}"
+                // Inyectamos las credenciales guardadas en Jenkins
+                withCredentials([usernamePassword(credentialsId: 'registry-creds', passwordVariable: 'REG_PASS', usernameVariable: 'REG_USER')]) {
+                    sh '''
+                        # Login seguro al registry usando las variables de entorno inyectadas
+                        echo "$REG_PASS" | docker login registry:5000 -u "$REG_USER" --password-stdin
+                        
+                        # Subimos la imagen ya autenticados
+                        docker push ${IMAGE_NAME}
+                    '''
+                }
             }
         }
     }
