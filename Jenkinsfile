@@ -34,5 +34,34 @@ pipeline {
                 }
             }
         }
+	stage('Deploy DEV') {
+            steps {
+                echo "Desplegando versión ${SHORT_COMMIT} en el Host mediante SSH..."
+                
+                // 1. Inyectamos las credenciales del Registry (usuario y contraseña)
+                withCredentials([usernamePassword(credentialsId: 'registry-creds', passwordVariable: 'REG_PASS', usernameVariable: 'REG_USER')]) {
+                    
+                    // 2. Inyectamos la llave SSH que acabas de crear
+                    sshagent(credentials: ['host-ssh-creds']) {
+                        sh '''
+                            # Instalamos el cliente SSH en el agente Alpine
+                            apk add --no-cache openssh-client || true
+                            
+                            # Preparamos el comando SSH desactivando el host key checking para que no pida confirmación manual
+                            SSH_CMD="ssh -o StrictHostKeyChecking=no amaciel2@192.168.122.187"
+
+                            # Ejecutamos toda la secuencia de despliegue dentro del Host
+                            $SSH_CMD "
+                                echo '$REG_PASS' | docker login registry:5000 -u '$REG_USER' --password-stdin
+                                docker pull registry:5000/mi-app:${SHORT_COMMIT}
+                                docker stop mi-app-dev || true
+                                docker rm mi-app-dev || true
+                                docker run -d --name mi-app-dev -p 8080:8080 registry:5000/mi-app:${SHORT_COMMIT}
+                            "
+                        '''
+                    }
+                }
+            }
+        }
     }
 }
